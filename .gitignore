@@ -1,0 +1,9 @@
+
+# image data sets
+Dataset/*
+#standard output of script when running in background
+nohup_*
+# text editor backup files
+*~
+core.*
+
