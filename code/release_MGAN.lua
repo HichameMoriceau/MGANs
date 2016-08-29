@@ -9,8 +9,15 @@ loadcaffe_wrap = paths.dofile('lib/loadcaffe_wrapper.lua')
 util = paths.dofile('lib/util.lua')
 
 local opt = {}
-opt.model_name = '../Dataset/VG_Alpilles_ImageNet100/MGAN/epoch_5_netG.t7'
-opt.release_name = '../Dataset/VG_Alpilles_ImageNet100/VG_Alpilles_ImageNet100_epoch5.t7'
+
+
+local cmd=torch.CmdLine()
+cmd:option('-model_name'  ,'../Dataset/Delaunay_ImageNet100/MGAN/epoch_5_netG.t7'          ,'Path/to/generative_model.t7 to be released.')
+cmd:option('-release_name','../Dataset/Delaunay_ImageNet100/Delaunay_ImageNet100_epoch5.t7','Path/to/release.t7 to be created.')
+local params=cmd:parse(arg)
+
+opt.model_name   = params.model_name
+opt.release_name = params.release_name
 
 ---*********************************************************************************************************************
 -- DO NOT CHANGE AFTER THIS LINE

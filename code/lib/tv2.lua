@@ -28,8 +28,15 @@ function TVLoss2:updateGradInput(input, gradOutput)
   self.y_diff:copy(input[{{}, {}, {1, -2}, {1, -2}}])
   self.y_diff:add(-1, input[{{}, {}, {2, -1}, {1, -2}}])
   self.gradInput[{{}, {}, {1, -2}, {1, -2}}]:add(self.x_diff):add(self.y_diff)
-  self.gradInput[{{}, {}, {1, -2}, {2, -1}}]:add(-1, self.x_diff)
-  self.gradInput[{{}, {}, {2, -1}, {1, -2}}]:add(-1, self.y_diff)
+  
+  local epsilon = 1e-8
+  self.gradInput[{{}, {}, {1, -2}, {1, -2}}]:cdiv(torch.sqrt(torch.add(torch.pow(self.x_diff,2), torch.pow(self.y_diff,2)):add(epsilon)))
+
+  -- self.gradInput[{{}, {}, {1, -2}, {2, -1}}]:add(-1, self.x_diff)
+  -- self.gradInput[{{}, {}, {2, -1}, {1, -2}}]:add(-1, self.y_diff)
+
+  self.gradInput = torch.sign(self.gradInput)
+
   self.gradInput:mul(self.strength)
   self.gradInput:add(gradOutput)
   return self.gradInput

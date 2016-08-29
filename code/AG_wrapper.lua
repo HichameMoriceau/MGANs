@@ -9,7 +9,7 @@ local function run_AG(params)
   step_scale = params.AG_step_scale
   num_rotation = params.AG_num_rotation
   num_scale = params.AG_num_scale
-  flag_flip = params.AG_flag_flip
+  flag_flip = false -- params.AG_flag_flip
 
   -----------------------------------------------------------------
   -- DONOT CHANGE AFTER THIS LINE

@@ -179,6 +179,8 @@ local function run_MDAN(params)
   --------------------------------
   -- build data for target images
   local target_images_names = pl.dir.getallfiles(opt.target_folder, '*.png')
+  print('images:')
+  print(target_images_names)
   local num_target_images = #target_images_names
   print(string.format('num of target images: %d', num_target_images))
 
@@ -193,6 +195,8 @@ local function run_MDAN(params)
       local new_dim_y = math.floor((image_target:size()[2] * scale) / opt.stand_atom) * opt.stand_atom
       image_target = image.scale(image_target, new_dim_x, new_dim_y, 'bilinear')
       image_target = image_target:mul(2):add(-1)
+
+      image_style=image_target:cuda()
 
       -- make copies
       for i_r = -opt.aug_num_rotation, opt.aug_num_rotation do
@@ -285,7 +289,6 @@ local function run_MDAN(params)
 
       -- build data for source images
       local image_source = image.load(source_images_names[i_source_image], 3)
-
       -- resize 
       local max_dim = math.max(image_source:size()[2], image_source:size()[3])
       local scale = opt.stand_imageSize_syn / max_dim
@@ -293,9 +296,11 @@ local function run_MDAN(params)
       local new_dim_y = math.floor((image_source:size()[2] * scale) / opt.stand_atom) * opt.stand_atom
       image_source = image.scale(image_source, new_dim_x, new_dim_y, 'bilinear')   
       image_source = image_source:mul(2):add(-1)
-
       image_source = image_source:cuda()
       
+
+      --image_source = match_colour(image_source, image_style)
+
 
       local source_x = {}
       local source_y = {}
@@ -611,6 +616,76 @@ local function run_MDAN(params)
   collectgarbage()
 
   return flag_state
+end
+
+function match_colour(target_img, source_img)
+ 
+   print('bef') 
+   print('target_img size')
+   print(target_img:size())
+   print('source_img size')
+   print(source_img:size())
+ 
+   t_row1=target_img[1]
+   t_row2=target_img[2]
+   t_row3=target_img[3]
+
+   s_row1=source_img[1]
+   s_row2=source_img[2]
+   s_row3=source_img[3]
+
+   source_img[1]=s_row3
+   source_img[3]=s_row1
+
+   target_img[1]=t_row3
+   target_img[3]=t_row1
+  
+ 
+   print('aft') 
+   print('target_img size')
+   print(target_img:size())
+   print('source_img size')
+   print(source_img:size())
+ 
+
+   target_img = target_img:div(255)
+   source_img = source_img:div(255)
+
+   mu_t = torch.mean(torch.mean(target_img,1),1)
+   t = target_img - mu_t
+   t = t.transpose(2,0,1).reshape(3,-1)
+   Ct = t.dot(t.T) / t.shape[1]
+   mu_s = source_img.mean(0).mean(0)
+   s = source_img - mu_s
+   s = s.transpose(2,0,1).reshape(3,-1)
+   Cs = s.dot(s.T) / s.shape[1]
+   if mode == 'chol' then
+       chol_t = np.linalg.cholesky(Ct)
+       chol_s = np.linalg.cholesky(Cs)
+       ts = chol_s.dot(np.linalg.inv(chol_t)).dot(t)
+   end
+   if mode == 'pca' then
+       eva_t, eve_t = np.linalg.eigh(Ct)
+       Qt = eve_t.dot(np.sqrt(np.diag(eva_t))).dot(eve_t.T)
+       eva_s, eve_s = np.linalg.eigh(Cs)
+       Qs = eve_s.dot(np.sqrt(np.diag(eva_s))).dot(eve_s.T)
+       ts = Qs.dot(np.linalg.inv(Qt)).dot(t)
+   end
+   if mode == 'sym' then
+       eva_t, eve_t = np.linalg.eigh(Ct)
+       Qt = eve_t.dot(np.sqrt(np.diag(eva_t))).dot(eve_t.T)
+       Qt_Cs_Qt = Qt.dot(Cs).dot(Qt)
+       eva_QtCsQt, eve_QtCsQt = np.linalg.eigh(Qt_Cs_Qt)
+       QtCsQt = eve_QtCsQt.dot(np.sqrt(np.diag(eva_QtCsQt))).dot(eve_QtCsQt.T)
+       ts = np.linalg.inv(Qt).dot(QtCsQt).dot(np.linalg.inv(Qt)).dot(t)
+   end
+
+   matched_img = ts.reshape(target_img.transpose(2,0,1).shape).transpose(1,2,0)
+   matched_img = matched_img + mu_s
+   matched_img[matched_img>1] = 1
+   matched_img[matched_img<0] = 0
+
+   return matched_img
 end
 
 return {
