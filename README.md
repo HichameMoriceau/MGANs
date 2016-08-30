@@ -9,21 +9,21 @@ The main problem of the MGAN method is the processing of *flat surfaces* and the
 - Concatenating addictional noise feature maps to the output of VGG (ReLU4_1)
 
 - Changing the L2 total variation loss to an L1 loss
-  ⋅⋅1. TV weight > 1e-4 prevents the network from initially learning,
-  ⋅⋅2. TV weight < 1e-4 does work but slows down the learning process
+  - TV weight > 1e-4 prevents the network from initially learning,
+  - TV weight < 1e-4 does work but slows down the learning process
 
 - Pretraining a generator network without setting the tv loss and then setting the L1 loss on:
-  ⋅⋅1. TV weight >= 1e-4 produces monochrome images
-  ⋅⋅2. TV weight = 5e-5 tends to blend colors drastically
-  ⋅⋅3. TV weight ~ 2e-5 tends to slightly smooth images during training but the images produced during testing are not as good as the ones produced during testing
+  - TV weight >= 1e-4 produces monochrome images
+  - TV weight =  5e-5 tends to blend colors drastically
+  - TV weight ~  2e-5 tends to slightly smooth images during training but the images produced during testing are not as good as the ones produced during testing
 
 - Removing the padding of VGG by taking crops of the feature maps (ReLU4_1)
-  ⋅⋅1.We take the centered crop (64⋅⋅512⋅⋅16⋅⋅16) of feature map tensor of size 64⋅⋅512⋅⋅25⋅⋅25. The generator upscales 3 times which gives us 128⋅⋅128 patches
+  - We take the centered crop (64x512x16x16) of feature map tensor of size 64x512x25x25. The generator upscales 3 times which gives us 128- 128 patches
 
 - Using Dmitry Ulyanov loss function (it uses VGG to compute a content and a texture loss)
-  ⋅⋅1. learning rate > 1e-3 prevents the generator network from learning
-  ⋅⋅2. learning rate = 1e-3, after 6 epochs of 800 iterations with a batch size of 32 the network reproduces shapes but all in the same color and with funny artefacts
-  ⋅⋅3. learning rate = 1e-4 *running*
+  - learning rate > 1e-3 prevents the generator network from learning
+  - learning rate = 1e-3, after 6 epochs of 800 iterations with a batch size of 32 the network reproduces shapes but all in the same color and with funny artefacts
+  - learning rate = 1e-4 *running*
    
 
 
