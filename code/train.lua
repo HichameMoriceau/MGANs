@@ -15,15 +15,12 @@ util           = paths.dofile('lib/util.lua')
 paths.dofile('lib/helper.lua')
 paths.dofile('lib/tv.lua')
 paths.dofile('lib/tv2.lua')
-cutorch.setDevice(1)
+
 MDAN_wrapper = require 'MDAN_wrapper'
 AG_wrapper   = require 'AG_wrapper'
 MGAN_wrapper = require 'MGAN_wrapper'
 
-cutorch.setDevice(1)
-
--- Run: nohup th train.lua -dataset_name Picasso_CelebA100 &
--- Run: nohup th train.lua -dataset_name ../Dataset/Picasso_CelebA100/ -tv_weight 5e-4  >> nohup.out &
+-- Run: nohup th train.lua -dataset_name ../Dataset/Picasso_CelebA100/ -tv_weight 0  >> nohup.out &
 
 local cmd = torch.CmdLine()
 cmd:option('-dataset_name'         , '../Dataset/Delaunay_ImageNet100/', 'Path to image data set')
@@ -35,8 +32,8 @@ cmd:option('-pixel_loss_OFF'       , '15', 'Turn OFF pixel loss after n epochs')
 cmd:option('-style_weight'         , '1e-2', '')
 cmd:option('-tv_weight_ON'         , '1', 'Turn ON total variation loss')
 cmd:option('-multi_step_ON'        , '15', 'Turn ON multi step mode after 15 epoch. (Output of generator is fed again to vgg then generator as input: 2 forward passes)')
-cmd:option('-learning_rate'        , '0.02', 'Initial learning rate for adam (same for generator and discriminator)')
-cmd:option('-save_interval_image'  , '50', 'Save visualization of training and generator every 50 images')
+cmd:option('-learning_rate'        , '2e-2', 'Initial learning rate for adam (same for generator and discriminator)')
+cmd:option('-save_every'           , '50', 'Save visualization of training and generator every 50 images')
 cmd:option('-batch_size'           , '64', '')
 cmd:option('-tv_weight'            , '1e-4', 'Total variation weight used when computing the generator gradient')
 cmd:option('-ulyanov_loss'         , '0', 'Set to 1 to use Dmitry Ulyanov s loss function.')
@@ -145,20 +142,18 @@ metrics:write("AG   duration: " .. AG_duration/60 .. " (training not finished)\n
 
 
 local style_img_name=pl.dir.getallfiles(dataset_name .. "Style/", '*.png')[1]
-print("style_img" .. style_img_name)
-
 -- For compatibility with Dmitry Ulyanov code
 local ulyanov_params = {}
 ulyanov_params.content_layers = 'relu4_2'
 ulyanov_params.style_layers = 'relu1_1,relu2_1,relu3_1,relu4_1'
-ulyanov_params.learning_rate = 1e-3
+ulyanov_params.learning_rate = params.learning_rate
 ulyanov_params.num_iterations = 50000
-ulyanov_params.save_every = 1000
-ulyanov_params.batch_size = 1
+ulyanov_params.save_every = params.save_every
+ulyanov_params.batch_size = params.batch_size
 ulyanov_params.image_size = 256
 ulyanov_params.content_weight = 1
-ulyanov_params.style_weight = 1
-ulyanov_params.tv_weight = 0
+ulyanov_params.style_weight = params.style_weight
+ulyanov_params.tv_weight = params.tv_weight
 ulyanov_params.style_image = style_img_name
 ulyanov_params.style_size = 256
 ulyanov_params.mode = 'style'
@@ -179,6 +174,7 @@ ulyanov_params.texture = ulyanov_params.style_image
 ulyanov_params.style_weight = params.style_weight
 ulyanov_params.image_size = train_imageSize
 
+
 local start_MGAN = os.time()
 -- ------------------------------------------------------------------------------------------------------------------------
 -- -- RUN MGAN
@@ -192,20 +188,17 @@ if flag_MGAN then
         MGAN_params.stand_atom            = stand_atom
         MGAN_params.pixel_blockSize       = train_imageSize
         MGAN_params.netS_weight           = MGAN_netS_weight
-
 	MGAN_params.training_noise_weight = params.training_noise_weight
 	MGAN_params.cropped_inputs        = tonumber(params.cropped_inputs)
         MGAN_params.num_noise_FM          = params.num_noise_FM
         MGAN_params.pixel_loss_OFF        = params.pixel_loss_OFF
         MGAN_params.tv_weight_ON          = params.tv_weight_ON
         MGAN_params.multi_step_ON         = params.multi_step_ON
-        MGAN_params.save_interval_image   = params.save_interval_image
+        MGAN_params.save_every            = params.save_every
         MGAN_params.learning_rate         = params.learning_rate
         MGAN_params.batch_size            = params.batch_size
         MGAN_params.tv_weight             = params.tv_weight
-        MGAN_params.ulyanov_loss          = params.ulyanov_loss
-        print("ulyanov_params.texture = " .. ulyanov_params.texture)
-        print("MGAN_params.pixel_blockSize = " .. MGAN_params.pixel_blockSize)
+        MGAN_params.ulyanov_loss          = tonumber(params.ulyanov_loss)
         local MGAN_state = MGAN_wrapper.state(MGAN_params, ulyanov_params)
         collectgarbage()    
     end

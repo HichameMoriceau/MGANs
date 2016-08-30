@@ -105,7 +105,7 @@ local function run_MGAN(params, ulyanov_params)
   opt.vgg_num_layer  = 36
 
   -- misc
-  opt.save_interval_image = params.save_interval_image   -- save iterval for image
+  opt.save_every = params.save_every   -- save iterval for image
   opt.display             = 1 -- display samples while training. 0 = false
   opt.gpu                 = 1
   cutorch.setDevice(opt.gpu)
@@ -396,7 +396,6 @@ local function run_MGAN(params, ulyanov_params)
   BlockPixel_testsource = BlockPixel_testsource:cuda()
   
   BlockInterfacetest = netEnco:forward(BlockPixel_testsource):clone()
-
   local BlockInterfacetest_cropped = BlockInterfacetest:clone()
   if opt.cropped_inputs == 1 then
     local block_h = BlockInterfacetest:size(3)
@@ -519,9 +518,16 @@ local function run_MGAN(params, ulyanov_params)
   end
 
 
+  local iteration = 0
+  local epoch     = opt.start_epoch
+  local epoch_tm   = torch.Timer()
+  local tm         = torch.Timer()
+  local data_tm    = torch.Timer()
+  local record_err = torch.Tensor(1)
+
   -- generator
   local fGx = function(x)
-
+    iteration = iteration + 1
     if opt.ulyanov_loss == 0 then
       netG:apply(function(m) if torch.type(m):find('Convolution') then m.bias:zero() end end)
       gradparametersG:zero()  
@@ -548,7 +554,7 @@ local function run_MGAN(params, ulyanov_params)
       
         errS[i_netS] = criterion_netS[i_netS]:forward(StyleScore_G[i_netS], label[i_netS])
         errG_Style = errG_Style + errS[i_netS]
-        local gradInput_StyleScore_G = criterion_netS[i_netS]:backward(StyleScore_G[i_netS], label[i_netS]):clone()  
+        local gradInput_StyleScore_G = criterion_netS[i_netS]:backward(StyleScore_G[i_netS], label[i_netS]):clone()
         local gradInput_netS = netS[i_netS]:updateGradInput(BlockVGG_G[i_netS], gradInput_StyleScore_G)
         netSVGG[i_netS]:forward(BlockPixel_G)
         local gradInput_Style = netSVGG[i_netS]:updateGradInput(BlockPixel_G, gradInput_netS)
@@ -569,29 +575,39 @@ local function run_MGAN(params, ulyanov_params)
       collectgarbage()
       -- logging
       print(('Epoch: [%d][%8d / %8d]\t Time: %.3f '
-             .. 'errG: %.4f'):format(
-                 epoch, ((i_iter-1) / opt.batchSize),
+             .. 'Li/Wand Generator loss: %.4f'):format(
+                 epoch, ((iteration-1) / opt.batchSize),
                  math.floor(num_target_images / opt.batchSize),
                  tm:time().real, errG and errG or -1))
     else 
       -- Use Dmitry Ulyanov loss function --
-      errG = errG + crit:forward({BlockPixel_G, BlockPixel_target_crop})
+      local targets = BlockPixel_target_crop:contiguous():clone():cuda()
+      local gen     = BlockPixel_G:contiguous():clone():cuda()
+      local src     = BlockInterface_cropped:contiguous():clone():cuda()
+      print("BlockPixel_target_crop size:")
+      print(BlockPixel_target_crop:size())
+      print("BlockPixel_G size:")
+      print(BlockPixel_G:size())
+      print("forward")
+      errG = errG + crit:forward({gen, targets})
       -- Backward
-      local grad = crit:backward({BlockPixel_G, BlockPixel_target_crop}, nil)
-      netG:backward(BlockPixel_source, grad[1])
+      print("backward")
+      local grad = crit:backward({gen, targets}, nil)
+      print("backward netG")
+      netG:backward(src, grad[1])
       errG = errG/params.batch_size
-      print('#it: ', iteration, 'Ulyanov loss: ', errG)
+      print('#epoch ' .. math.floor(iteration/num_source_images) .. 'it: ', iteration, 'Ulyanov Generator loss: ', errG)
+      targets = nil
+      gen = nil
+      collectgarbage()
+      collectgarbage()
     end
-    return errG, gradParametersG
+    return errG, gradparametersG
   end
 
   print('*****************************************************')
   print('Training Loop: ');
   print('*****************************************************') 
-  local epoch_tm   = torch.Timer()
-  local tm         = torch.Timer()
-  local data_tm    = torch.Timer()
-  local record_err = torch.Tensor(1)
 
   print('source size: ' .. pixel_blockSize_source .. ', target size: ' .. pixel_blockSize_target)
   local BlockPixel_testsource_crop = torch.Tensor(opt.batchSize, opt.nc, pixel_blockSize_target, pixel_blockSize_target)
@@ -727,7 +743,7 @@ local function run_MGAN(params, ulyanov_params)
             tmp:add(noise:mul(opt.training_noise_weight))
             local smaller = image.scale(tmp:double(), pixel_blockSize_target-68, pixel_blockSize_target-68, 'bilinear')
             src[i_img] = smaller
-
+            
             local tmp_test = BlockPixel_testsource[i_img]:double()
             local noise_test = generate_noise(pixel_blockSize_source)
             noise_test = torch.repeatTensor(noise_test, 3,1,1)
@@ -760,7 +776,7 @@ local function run_MGAN(params, ulyanov_params)
         disp.image(generated, {win=3, title='generated'})
       end
 
-      if counter == math.floor(num_target_images / opt.batchSize) or counter % opt.save_interval_image == 0 then
+      if counter == math.floor(num_target_images / opt.batchSize) or counter % opt.save_every == 0 then
         print('display')
         local img_source = image.toDisplayTensor{input = source, nrow = math.ceil(math.sqrt(source:size(1)))}
         local img_sourcetest = image.toDisplayTensor{input = sourcetest, nrow = math.ceil(math.sqrt(sourcetest:size(1)))} 

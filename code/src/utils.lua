@@ -196,10 +196,10 @@ function deprocess(img)
   return img
 end
 
------Almost copy paste of jcjohnson's code -----------
-local TVLoss_ulyanov, parent = torch.class('nn.TVLoss_ulyanov', 'nn.Module')
+-----Almost copy paste of jcjohnson s code -----------
+local TVLoss_ULYANOV, parent = torch.class('nn.TVLoss_ULYANOV', 'nn.Module')
 
-function TVLoss_ulyanov:__init(strength)
+function TVLoss_ULYANOV:__init(strength)
   parent.__init(self)
   print('Using TV loss with weight ', strength)
   self.strength = strength
@@ -207,13 +207,13 @@ function TVLoss_ulyanov:__init(strength)
   self.y_diff = torch.Tensor()
 end
 
-function TVLoss_ulyanov:updateOutput(input)
+function TVLoss_ULYANOV:updateOutput(input)
   self.output = input
   return self.output
 end
 
 -- TV loss backward pass inspired by kaishengtai/neuralart
-function TVLoss_ulyanov:updateGradInput(input, gradOutput)
+function TVLoss_ULYANOV:updateGradInput(input, gradOutput)
   self.gradInput:resizeAs(input):zero()
   
   for obj = 1, input:size(1) do

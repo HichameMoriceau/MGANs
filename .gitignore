@@ -7,3 +7,6 @@ nohup_*
 *~
 core.*
 
+# ignore VGG definition file
+*.caffemodel
+*.prototxt*

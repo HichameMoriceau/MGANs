@@ -66,7 +66,6 @@ function create_descriptor_net(params)
 
   local cnn = loadcaffe.load(params.proto_file, params.model_file, params.backend):cuda()
 
-  print("texture desc net: " .. params.texture)
   -- load texture
   local texture_image = image.load(params.texture, 3)
   if params.style_size > 0 then 
@@ -137,7 +136,7 @@ function create_descriptor_net(params)
 
   net:add(nn.DummyGradOutput())
 
-  -- We don't need the base CNN anymore, so clean it up to save memory.
+  -- We don t need the base CNN anymore, so clean it up to save memory.
   cnn = nil
   for i=1,#net.modules do
     local module = net.modules[i]
