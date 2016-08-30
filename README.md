@@ -1,12 +1,12 @@
-# 
+# Real time style transfer with MGAN
 
-The main problem of the MGAN method is the processing of *flat surfaces* and the ghosting effect produced around faces. To fix this problem, we tried the following methods:
+The main problem of the MGAN method is the processing of *flat surfaces* and the ghosting effect produced around faces. To fix this problem, we tried the following :
 
 - Adding brown noise on input images during training
 
 - Adding a total variation (TV) loss module
 
-- Concatenating addictional noise feature maps to the output of VGG (ReLU4_1)
+- Concatenating additional noise feature maps to the output of VGG (ReLU4_1)
 
 - Changing the L2 total variation loss to an L1 loss
   - TV weight > 1e-4 prevents the network from initially learning,
@@ -18,16 +18,17 @@ The main problem of the MGAN method is the processing of *flat surfaces* and the
   - TV weight ~  2e-5 tends to slightly smooth images during training but the images produced during testing are not as good as the ones produced during testing
 
 - Removing the padding of VGG by taking crops of the feature maps (ReLU4_1)
-  - We take the centered crop (64x512x16x16) of feature map tensor of size 64x512x25x25. The generator upscales 3 times which gives us 128- 128 patches
+  - We take the centered crop (64x512x16x16) of feature map tensor of size 64x512x25x25. The generator upscales 3 times which gives us 128x128 patches, the training visualizations look better but the generated images do not look as good as the default method
 
-- Using Dmitry Ulyanov loss function (it uses VGG to compute a content and a texture loss)
+- Using Dmitry Ulyanov loss function (it uses VGG to compute a content and a texture loss) : This was not thoroughly explored 
   - learning rate > 1e-3 prevents the generator network from learning
   - learning rate = 1e-3, after 6 epochs of 800 iterations with a batch size of 32 the network reproduces shapes but all in the same color and with funny artefacts
-  - learning rate = 1e-4 *running*
    
+## References
+[Dmitri Ulyanov](https://github.com/DmitryUlyanov/texture_nets)
+[Li and Wand](https://github.com/chuanli11/MGANs)
 
-
-# Original MGANs readme:
+# Original MGANs readme from Li/Wand
 Training & Testing code (torch), pre-trained models and supplementary materials for "[Precomputed Real-Time Texture Synthesis with Markovian Generative Adversarial Networks](http://arxiv.org/abs/1604.04382)". 
 
 See this [video](https://www.youtube.com/watch?v=PRD8LpPvdHI) for a quick explaination for our method and results. 
